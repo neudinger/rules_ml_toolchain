@@ -270,6 +270,13 @@ hipcc_configure(
 )
 
 ##############################################################
+# MUSA configuration
+
+load("//gpu/musa:musa_configure.bzl", "musa_configure")
+
+musa_configure(name = "local_config_musa")
+
+##############################################################
 # Local sysroot configuration
 
 load("//cc/sysroots:local_sysroot_configure.bzl", "local_sysroot_configure")

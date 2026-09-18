@@ -158,6 +158,12 @@ hipcc_configure(
 )
 
 ##############################################################
+# MUSA configuration
+
+musa_configure = use_extension("//extensions:musa_configure.bzl", "musa_configure_ext")
+use_repo(musa_configure, "local_config_musa")
+
+##############################################################
 # Hermetic toolchain configuration
 
 toolchain = use_extension("//extensions:toolchain.bzl", "toolchain_ext")
