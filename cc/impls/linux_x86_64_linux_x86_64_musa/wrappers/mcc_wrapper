@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+#
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+"""MUSA hermetic toolchain wrapper."""
+
+from argparse import ArgumentParser
+import os
+import subprocess
+import sys
+
+
+CPU_COMPILER = os.environ.get("GCC_PATH", "")
+MCC_PATH = os.environ.get("MCC_PATH", "")
+MUSA_PATH = os.environ.get("MUSA_PATH", "")
+MUSA_GPU_ARCHS = os.environ.get("MUSA_GPU_ARCHS", "")
+MUSA_LIBRARY_PATH = os.environ.get("MUSA_LIBRARY_PATH", "")
+VERBOSE = os.environ.get("CROSSTOOL_VERBOSE", "0") == "1"
+
+
+def Log(message):
+    print("mcc_wrapper: {0}".format(message))
+
+
+def WrapperSibling(path):
+    wrapper_dir = os.path.dirname(sys.argv[0])
+    if not wrapper_dir:
+        wrapper_dir = os.path.dirname(__file__)
+    return os.path.join(wrapper_dir, path)
+
+
+def SplitCombinedFlags(argv):
+    split_flags = []
+    for arg in argv:
+        cleaned = arg
+        if (arg.startswith("'") and arg.endswith("'")) or (
+            arg.startswith('"') and arg.endswith('"')
+        ):
+            cleaned = arg[1:-1]
+        for prefix in ["-isystem ", "-iquote ", "-I ", "-MF ", "-D ", "-U "]:
+            if cleaned.startswith(prefix):
+                split_flags.extend([prefix.strip(), cleaned[len(prefix) :]])
+                break
+        else:
+            split_flags.append(cleaned)
+    return split_flags
+
+
+def IsMusaFlag(flag):
+    return (
+        flag.startswith("--musa-path")
+        or flag.startswith("--offload-arch")
+        or flag in ["-mtgpu", "-cuda_wrapper", "-nogpuinc", "-nogpulib"]
+    )
+
+
+def FilterHostFlags(argv):
+    return [flag for flag in SplitCombinedFlags(argv) if not IsMusaFlag(flag)]
+
+
+def MusaArchFlags():
+    flags = []
+    for arch in MUSA_GPU_ARCHS.split(","):
+        arch = arch.strip()
+        if arch:
+            flags.append("--offload-arch=" + arch)
+    return flags
+
+
+def MusaResourceDirFlag():
+    clang_dir = os.path.join(MUSA_PATH, "lib", "clang")
+    if not os.path.isdir(clang_dir):
+        return []
+    versions = [
+        name
+        for name in os.listdir(clang_dir)
+        if os.path.isdir(os.path.join(clang_dir, name, "include"))
+    ]
+    if not versions:
+        return []
+    versions.sort()
+    resource_dir = os.path.join(clang_dir, versions[-1])
+    return [
+        "-resource-dir",
+        resource_dir,
+        "-isystem",
+        os.path.join(resource_dir, "include"),
+    ]
+
+
+def MusaStdintCompatFlags():
+    # MCC's injected MUSA wrapper uses uint*_t before command-line includes are
+    # processed when Bazel compiles with -nostdinc. Define the builtin aliases
+    # for that wrapper, then clean them up before parsing user code.
+    return [
+        "-Duint8_t=__UINT8_TYPE__",
+        "-Duint16_t=__UINT16_TYPE__",
+        "-Duint32_t=__UINT32_TYPE__",
+        "-Duint64_t=__UINT64_TYPE__",
+        "-include",
+        WrapperSibling("musa_stdint_compat.h"),
+    ]
+
+
+def InvokeMcc(argv, log=False):
+    flags = [flag for flag in SplitCombinedFlags(argv) if not IsMusaFlag(flag)]
+    cmd = [MCC_PATH, "--musa-path=" + MUSA_PATH]
+    cmd.extend(MusaArchFlags())
+    cmd.extend(MusaResourceDirFlag())
+    cmd.extend(MusaStdintCompatFlags())
+    cmd.extend(["-x", "musa"])
+    cmd.extend(flags)
+    if log or VERBOSE:
+        Log(" ".join(cmd))
+    return subprocess.call(cmd)
+
+
+def InvokeHostCompiler(argv):
+    cmd = [CPU_COMPILER] + FilterHostFlags(argv)
+    if VERBOSE:
+        Log(" ".join(cmd))
+    return subprocess.call(cmd)
+
+
+def InvokeLinker(argv):
+    flags = FilterHostFlags(argv)
+    lib_paths = [p for p in MUSA_LIBRARY_PATH.split(":") if p]
+    for path in lib_paths:
+        flags.extend(["-L", path])
+    cmd = [CPU_COMPILER] + flags
+    if VERBOSE:
+        Log(" ".join(cmd))
+    return subprocess.call(cmd)
+
+
+def IsCompileAction(argv):
+    return "-c" in argv
+
+
+def main():
+    for name in ("GCC_PATH", "MCC_PATH", "MUSA_PATH"):
+        if not os.environ.get(name):
+            sys.stderr.write("mcc_wrapper: missing configured toolchain input " + name + "\n")
+            return 1
+    os.environ["PWD"] = ""
+    parser = ArgumentParser(fromfile_prefix_chars="@")
+    parser.add_argument("-x", nargs=1)
+    parser.add_argument("--musa_log", action="store_true")
+    parser.add_argument("-pass-exit-codes", action="store_true")
+    args, leftover = parser.parse_known_args(sys.argv[1:])
+    action_args = list(leftover)
+    if args.x:
+        action_args = ["-x", args.x[0]] + action_args
+
+    if VERBOSE:
+        Log("MCC_PATH=" + MCC_PATH)
+        Log("MUSA_PATH=" + MUSA_PATH)
+
+    if args.x and args.x[0] == "musa":
+        return InvokeMcc(leftover, args.musa_log)
+    if args.pass_exit_codes or not IsCompileAction(action_args):
+        return InvokeLinker(action_args)
+    return InvokeHostCompiler(action_args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,24 +15,6 @@
 # limitations under the License.
 # ==============================================================================
 
-load(
-    "//third_party/rules_cc_toolchain/features:features.bzl",
-    "cc_toolchain_sysroot_feature",
-)
+set -o pipefail
 
-package(
-    default_visibility = [
-        "//cc/impls/linux_x86_64_linux_x86_64:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_cuda:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_musa:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_rocm:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_sycl:__pkg__",
-    ],
-)
-
-cc_toolchain_sysroot_feature(
-    name = "sysroot",
-    enabled = True,
-    sysroot = "@sysroot_linux_x86_64//:sysroot",
-    target = "x86_64-linux-gnu",
-)
+$CPP_PATH "$@"

@@ -153,6 +153,12 @@ rocm_hermetic = use_extension("//extensions:rocm_hermetic_download.bzl", "rocm_h
 use_repo(rocm_hermetic, "config_rocm_hipcc", "rocm_hermetic_dist")
 
 ##############################################################
+# MUSA configuration
+
+musa_configure = use_extension("//extensions:musa_configure.bzl", "musa_configure_ext")
+use_repo(musa_configure, "local_config_musa")
+
+##############################################################
 # Hermetic toolchain configuration
 
 toolchain = use_extension("//extensions:toolchain.bzl", "toolchain_ext")

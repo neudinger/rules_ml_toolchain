@@ -13,24 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 
-load(
-    "//third_party/rules_cc_toolchain/features:features.bzl",
-    "cc_toolchain_sysroot_feature",
-)
+"""MUSA configuration files."""
 
-package(
-    default_visibility = [
-        "//cc/impls/linux_x86_64_linux_x86_64:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_cuda:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_musa:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_rocm:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_sycl:__pkg__",
-    ],
-)
+package(default_visibility = ["//visibility:public"])
 
-cc_toolchain_sysroot_feature(
-    name = "sysroot",
-    enabled = True,
-    sysroot = "@sysroot_linux_x86_64//:sysroot",
-    target = "x86_64-linux-gnu",
-)
+exports_files([
+    "BUILD.tpl",
+    "build_defs.bzl.tpl",
+    "musa_configure.bzl",
+    "musa_redist.bzl",
+])

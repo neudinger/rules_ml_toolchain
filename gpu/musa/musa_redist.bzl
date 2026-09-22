@@ -13,24 +13,17 @@
 # limitations under the License.
 # ==============================================================================
 
-load(
-    "//third_party/rules_cc_toolchain/features:features.bzl",
-    "cc_toolchain_sysroot_feature",
-)
+"""Qualified MUSA SDK for the S4000 / mp_22 toolchain."""
 
-package(
-    default_visibility = [
-        "//cc/impls/linux_x86_64_linux_x86_64:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_cuda:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_musa:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_rocm:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_sycl:__pkg__",
-    ],
-)
-
-cc_toolchain_sysroot_feature(
-    name = "sysroot",
-    enabled = True,
-    sysroot = "@sysroot_linux_x86_64//:sysroot",
-    target = "x86_64-linux-gnu",
+MUSA_REDIST = struct(
+    version = "5.1.0",
+    version_number = 50100,
+    llvm_major = 14,
+    mcc_path = "bin/mcc",
+    library_paths = ["lib"],
+    gpu_architectures = ["mp_22"],
+    device = "S4000",
+    url = "https://github.com/neudinger/rules-ml-toolchain-redists/releases/download/musa-v5.1.0-musa_sdk_5_1_0_cc2_2_deb-ubuntu-x86_64/musa-toolkit-5.1.0-musa_sdk_5_1_0_cc2_2_deb-ubuntu-x86_64.tar.zst",
+    sha256 = "afa05b1e73c4816e063fb695c889e37877599aa021a4ef8dba08998c1f3b1f9f",
+    root = "musa",
 )

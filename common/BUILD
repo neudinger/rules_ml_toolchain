@@ -288,6 +288,28 @@ config_setting(
 
 
 #######################################################
+# Enable MUSA support flags
+
+bool_flag(
+    name = "enable_musa",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "is_musa_enabled",
+    flag_values = {
+        ":enable_musa": "True",
+    },
+)
+
+config_setting(
+    name = "is_musa_disabled",
+    flag_values = {
+        ":enable_musa": "False",
+    },
+)
+
+#######################################################
 # Sanitizers flags
 string_flag(
     name = "asan_options",

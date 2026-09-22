@@ -13,24 +13,14 @@
 # limitations under the License.
 # ==============================================================================
 
-load(
-    "//third_party/rules_cc_toolchain/features:features.bzl",
-    "cc_toolchain_sysroot_feature",
-)
+"""MUSA module extension for Moore Threads GPU toolchain configuration."""
 
-package(
-    default_visibility = [
-        "//cc/impls/linux_x86_64_linux_x86_64:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_cuda:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_musa:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_rocm:__pkg__",
-        "//cc/impls/linux_x86_64_linux_x86_64_sycl:__pkg__",
-    ],
-)
+load("//gpu/musa:musa_configure.bzl", "musa_configure")
 
-cc_toolchain_sysroot_feature(
-    name = "sysroot",
-    enabled = True,
-    sysroot = "@sysroot_linux_x86_64//:sysroot",
-    target = "x86_64-linux-gnu",
+def _musa_configure_ext_impl(mctx):
+    musa_configure(name = "local_config_musa")
+
+musa_configure_ext = module_extension(
+    implementation = _musa_configure_ext_impl,
+    doc = """MUSA module extension for configuring the Moore Threads GPU toolchain.""",
 )
